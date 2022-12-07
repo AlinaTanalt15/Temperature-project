@@ -2,33 +2,40 @@
 #include <SoftwareSerial.h>
 #include <dht.h>
 #include <semphr.h>
-​
-​
+
+#include <task.h>
+
 dht DHT;
 int Data;
 SoftwareSerial BTserial(10, 9); // RX 10 - TX 9;
 #define DHT11_PIN 4
-​
-​
-​
+
 // Declarare Task-uri
 void TaskTrimitereDate( void *pvParameters );
 void TaskCitireTemperatura( void *pvParameters );
 void TaskCitireHumi( void *pvParameters );
-​
+
 // Globals
+unsigned long timeBegin;
+unsigned long timeEnd;
+unsigned long duration;
+double averageDuration;
+unsigned long timeBegin1;
+unsigned long timeEnd1;
+unsigned long duration1;
+double averageDuration1;
 char transmiteret[20]; 
 char transmitereh[20];
 int temperatureData; 
 int humiData;
 SemaphoreHandle_t xSerialSemaphore;
-​
+
 void setup() {
   // initialize serial communication at 9600 bits per second:
-​
+
   Serial.begin(9600);
   BTserial.begin(9600);
-​
+
   while (!Serial) {
     ;
   } 
@@ -38,7 +45,7 @@ void setup() {
     if ((xSerialSemaphore) != NULL)
     xSemaphoreGive((xSerialSemaphore));         // portul serial este disponibil pentru a fi folosit
     }
-​
+
   xTaskCreate(
     TaskTrimitereDate
     ,  "task1"
@@ -60,15 +67,16 @@ void setup() {
     ,  NULL
     ,  2
     ,  NULL );
-​
+
   vTaskStartScheduler();
   
 }
-​
+
+
 void loop()
 {
 }
-​
+
 void TaskTrimitereDate(void *pvParameters)  {
   pinMode(7, OUTPUT);
   while (1)
@@ -88,12 +96,20 @@ void TaskTrimitereDate(void *pvParameters)  {
      vTaskDelay(10);
   
      Serial.write(transmiteret);//afisarea temperaturii pe seriala
+    
      vTaskDelay(100);
      Serial.println();
      Serial.write(transmitereh);//afisarea umiditatii pe seriala
      vTaskDelay(100);
   
       Serial.println();
+      Serial.print("Timpul executarii task-ului TaskCitireHumi este de: ");
+      Serial.print(averageDuration);
+       Serial.println("ms");
+  
+       Serial.print("Timpul executarii task-ului TaskCitireTemperatura este de: ");
+      Serial.print(averageDuration1);
+       Serial.println("ms");
      Serial.println("Waiting for command...");
     
      if (BTserial.available()) { //wait for data received
@@ -149,11 +165,12 @@ void TaskTrimitereDate(void *pvParameters)  {
       vTaskDelay(500 / portTICK_PERIOD_MS );
   }
 }
-​
+
+
 void TaskCitireTemperatura(void *pvParameters)  {
   while (1)
   { 
-     
+      timeBegin1 = micros();
      int chk = DHT.read11(DHT11_PIN);//colectarea valorii de le senzor
      if (xSemaphoreTake(xSerialSemaphore, (TickType_t) 5) == pdTRUE)
        { 
@@ -162,14 +179,18 @@ void TaskCitireTemperatura(void *pvParameters)  {
 	
      xSemaphoreGive(xSerialSemaphore);}
      vTaskDelay(10);
+     timeEnd1 = micros();
+    duration1 = timeEnd - timeBegin;
+    averageDuration1 = (double)duration1 / 1000 ;
+
   }
   vTaskDelay(1500 / portTICK_PERIOD_MS );
-​
+
 }
 void TaskCitireHumi(void *pvParameters)  {
   while (1)
   { 
-     
+       timeBegin = micros();
      int chk1 = DHT.read11(DHT11_PIN);// colectarea valorii de la senzor
      if (xSemaphoreTake(xSerialSemaphore, (TickType_t) 5) == pdTRUE)
       { 
@@ -177,7 +198,12 @@ void TaskCitireHumi(void *pvParameters)  {
       
      xSemaphoreGive(xSerialSemaphore);}
      vTaskDelay(10);
+       timeEnd = micros();
+       duration = timeEnd - timeBegin;
+       averageDuration = (double)duration / 1000 ;
+     
   }
-​
+  
+
   vTaskDelay(1500 / portTICK_PERIOD_MS ); 
 }
