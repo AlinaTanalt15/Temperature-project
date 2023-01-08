@@ -180,7 +180,7 @@ void TaskCitireTemperatura(void *pvParameters)  {
      xSemaphoreGive(xSerialSemaphore);}
      vTaskDelay(10);
      timeEnd1 = micros();
-    duration1 = timeEnd - timeBegin;
+    duration1 = timeEnd1 - timeBegin1;
     averageDuration1 = (double)duration1 / 1000 ;
 
   }
